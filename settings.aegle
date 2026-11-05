@@ -1,0 +1,191 @@
+// The bar's settings, opened by a click on its layout symbol or
+// `palettes msg toggle settings.aegle`:
+//   wallpapers  pictures in the wallpaper folder; a click sets one
+//   online      Wallhaven, Konachan and yande.re: search or take a random one;
+//               a click downloads it into the folder and sets it
+//   look        colors from the compositor or the wallpaper, Pastel's too,
+//               bar opacity
+// wallpaper.luau does the work and keeps the settings.
+use "palettes.aegle"
+use "ui.aegle"
+
+record Wall { key: string; thumb: string; url: string; label: string }
+
+component Heading(text: string) {
+    Text { text: text; min_width: 76dp; shrink: 0; foreground: token("palette.5"); font_family: "Hack, monospace"; font_size: 15dp }
+}
+
+component Action(text: string, tooltip: string = "") {
+    event pressed
+    Stack {
+        shrink: 0
+        background: #8080801a
+        Row { align: center; padding: [5dp, 11dp]
+              Text { text: text; foreground: token("palette.2"); font_family: "Hack, monospace"; font_size: 15dp } }
+        Hit { tooltip: tooltip; on pressed { emit pressed } }
+    }
+}
+
+component Thumb(key: string, thumb: string, label: string, current: bool) {
+    Stack {
+        width: 170dp; height: 96dp; shrink: 0
+        background: #80808020
+        Image { source: thumb; fit: cover; width: 170dp; height: 96dp }
+        Column { width: 170dp; height: 96dp; border_width: 2dp; border_color: token("palette.3"); visible: current }
+        Row { visible: label != ""; justify_self: start; align_self: end; padding: [1dp, 5dp]; background: #000000a0
+              Text { text: label; foreground: #ffffffdd; font_family: "Hack, monospace"; font_size: 13dp } }
+        Hit { on pressed { host.pick_wallpaper(key) } }
+    }
+}
+
+// `text` only starts it; `changed` follows every edit, so buttons beside it
+// act on what it shows, not on what it held when last submitted.
+component Field(text: string) {
+    event changed(string)
+    event submitted(string)
+    TextField {
+        text: text; grow: 1; min_width: 0dp
+        foreground: token("palette.2"); font_family: "Hack, monospace"; font_size: 15dp
+        background: #8080801a; radius: 0dp; border_width: 0dp; focus_width: 1dp; padding: 6dp
+        on changed { emit changed(self.text) }
+        on submitted { emit submitted(self.text) }
+    }
+}
+
+Panel {
+    edge: center
+    span: 752dp
+    size: 600dp
+    layer: overlay
+    keyboard: on_demand
+    // Dragged by its tab bar's empty part, or any other spot without a control.
+    movable: true
+    radius: 0dp
+    padding: 0dp
+    background: token("palette.1")
+    blur: true
+
+    state page: string = "local"
+    state wall_path: string = ""
+    state wall_thumb: string = ""
+    state wall_blur: float = 0.0
+    state wall_dir: string = ""
+    state wall_source: string = "wallhaven"
+    // The search words: this panel's alone, gone when it closes.
+    state wall_tags: string = ""
+    state wall_status: string = ""
+    state local_walls: list<Wall> = []
+    state online_walls: list<Wall> = []
+    state online_page: int = 1
+    state colors_from: string = "compositor"
+    state pastel_colors: string = "keep"
+    state glass: float = 0.72
+
+    Row {
+        align: stretch
+        shrink: 0
+        Choice { text: "wallpapers"; active: page == "local"; on pressed { page = "local" } }
+        Choice { text: "online"; active: page == "online"; on pressed { page = "online" } }
+        Choice { text: "look"; active: page == "look"; on pressed { page = "look" } }
+        Row { grow: 1; min_width: 0dp; align: center; justify: end; padding: [0dp, 10dp]
+              Text { text: wall_status; shrink: 1; min_width: 0dp; foreground: token("palette.5")
+                     font_family: "Hack, monospace"; font_size: 14dp } }
+        Choice { text: "x"; active: false; on pressed { host.close("settings.aegle") } }
+    }
+    Column { height: 1dp; shrink: 0; background: token("palette.5") }
+
+    // Pictures on disk.
+    Column {
+        visible: page == "local"
+        grow: 1; min_height: 0dp; padding: 12dp; gap: 12dp
+        Row {
+            gap: 12dp; shrink: 0
+            Stack { width: 192dp; height: 108dp; shrink: 0; background: #80808020
+                    Image { source: wall_thumb; fit: cover; width: 192dp; height: 108dp } }
+            Column {
+                grow: 1; min_width: 0dp; gap: 8dp; justify: center
+                Row { align: center; gap: 8dp
+                      Heading { text: "current" }
+                      Text { text: wall_path; shrink: 1; min_width: 0dp; foreground: token("palette.2")
+                             font_family: "Hack, monospace"; font_size: 15dp }
+                      Row { grow: 1 }
+                      Action { text: "none"; on pressed { host.set_setting("wallpaper", "") } } }
+                Row { align: center; gap: 8dp
+                      Heading { text: "blur" }
+                      Slider { min: 0.0; max: 40.0; value: wall_blur; step: 1.0; grow: 1
+                               indicator_color: token("palette.3")
+                               on changed { host.set_number("blur", self.value) } }
+                      Text { text: str(int(wall_blur)); min_width: 32dp; foreground: token("palette.2")
+                             font_family: "Hack, monospace"; font_size: 15dp } }
+                Row { align: center; gap: 8dp
+                      Heading { text: "folder" }
+                      Field { text: wall_dir; on submitted(dir) { host.set_setting("dir", dir); host.list_wallpapers() } }
+                      Action { text: "rescan"; on pressed { host.set_setting("dir", wall_dir); host.list_wallpapers() } } }
+            }
+        }
+        ScrollView {
+            border_width: 0dp
+            grow: 1; min_height: 0dp
+            Row {
+                wrap: wrap; gap: 8dp
+                for w in local_walls key w.key {
+                    Thumb { key: w.key; thumb: w.thumb; label: w.label; current: w.key == wall_path }
+                }
+            }
+        }
+    }
+
+    // Wallpaper sites, like end4's.
+    Column {
+        visible: page == "online"
+        grow: 1; min_height: 0dp; padding: 12dp; gap: 12dp
+        Row {
+            align: stretch; gap: 6dp; shrink: 0
+            Choice { text: "wallhaven"; active: wall_source == "wallhaven"; on pressed { host.search_wallpapers("wallhaven", wall_tags, 1) } }
+            Choice { text: "konachan"; active: wall_source == "konachan"; on pressed { host.search_wallpapers("konachan", wall_tags, 1) } }
+            Choice { text: "yande.re"; active: wall_source == "yandere"; on pressed { host.search_wallpapers("yandere", wall_tags, 1) } }
+            Field { text: ""; on changed(tags) { wall_tags = tags }
+                    on submitted(tags) { wall_tags = tags; host.search_wallpapers(wall_source, tags, 1) } }
+            Action { text: "search"; on pressed { host.search_wallpapers(wall_source, wall_tags, 1) } }
+            Action { text: "random"; tooltip: "download a random one and set it"; on pressed { host.random_wallpaper(wall_source, wall_tags) } }
+        }
+        ScrollView {
+            border_width: 0dp
+            grow: 1; min_height: 0dp
+            Row {
+                wrap: wrap; gap: 8dp
+                for w in online_walls key w.key {
+                    Thumb { key: w.key; thumb: w.thumb; label: w.label; current: false }
+                }
+            }
+        }
+        Row {
+            align: center; justify: center; gap: 12dp; shrink: 0
+            Action { text: "< prev"; on pressed { host.search_wallpapers(wall_source, wall_tags, online_page - 1) } }
+            Mono { text: "page " + str(online_page); dim: true }
+            Action { text: "next >"; on pressed { host.search_wallpapers(wall_source, wall_tags, online_page + 1) } }
+        }
+    }
+
+    // The bar's look.
+    Column {
+        visible: page == "look"
+        grow: 1; padding: 12dp; gap: 12dp
+        Row { align: center; gap: 6dp
+              Heading { text: "colors" }
+              Choice { text: "compositor"; active: colors_from == "compositor"; on pressed { host.set_setting("colors", "compositor") } }
+              Choice { text: "wallpaper"; active: colors_from == "wallpaper"; on pressed { host.set_setting("colors", "wallpaper") } } }
+        // Rewrites the colors in Pastel's config.toml, which Pastel reloads.
+        Row { align: center; gap: 6dp
+              Heading { text: "pastel" }
+              Choice { text: "keep"; active: pastel_colors == "keep"; on pressed { host.set_setting("pastel", "keep") } }
+              Choice { text: "follow wallpaper"; active: pastel_colors == "follow"; on pressed { host.set_setting("pastel", "follow") } } }
+        Row { align: center; gap: 8dp
+              Heading { text: "opacity" }
+              Slider { min: 0.2; max: 1.0; value: glass; grow: 1
+                       indicator_color: token("palette.3")
+                       on changed { host.set_number("glass", self.value) } }
+              Text { text: str(int(glass * 100.0 + 0.5)) + "%"; min_width: 48dp; foreground: token("palette.2")
+                     font_family: "Hack, monospace"; font_size: 15dp } }
+    }
+}

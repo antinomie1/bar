@@ -1,0 +1,36 @@
+// Pieces the bar and its panels share. Colors are tokens, not expressions,
+// so a look that changes with a condition is two layers picked by `visible`.
+
+component Mono(text: string, dim: bool) {
+    Stack {
+        shrink: 0
+        Text { text: text; visible: !dim; foreground: token("palette.2"); font_family: "Hack, monospace"; font_size: 16dp }
+        Text { text: text; visible: dim; foreground: token("palette.5"); font_family: "Hack, monospace"; font_size: 16dp }
+    }
+}
+
+// A transparent button over whatever shares its Stack cell.
+component Hit(tooltip: string = "") {
+    event pressed
+    event menu
+    Button {
+        text: ""; tooltip: tooltip
+        padding: 0dp; min_width: 0dp; min_height: 0dp; radius: 0dp; border_width: 0dp; focus_width: 0dp
+        background: #00000000; hover_background: #80808026; pressed_background: #8080803a
+        on clicked { emit pressed }
+        on context_menu { emit menu }
+    }
+}
+
+// A label that is selbg when `on`, like a shown tag.
+component Choice(text: string, active: bool) {
+    event pressed
+    Stack {
+        shrink: 0
+        Column { background: token("palette.3"); visible: active }
+        Row { align: center; padding: [5dp, 11dp]
+              Text { text: text; visible: active; foreground: token("palette.4"); font_family: "Hack, monospace"; font_size: 15dp }
+              Text { text: text; visible: !active; foreground: token("palette.2"); font_family: "Hack, monospace"; font_size: 15dp } }
+        Hit { on pressed { emit pressed } }
+    }
+}

@@ -1,0 +1,13 @@
+// The wallpaper on every output, opened by bar.luau. Pick it in the settings
+// panel (settings.aegle); wallpaper.luau keeps it and the other settings.
+use "palettes.aegle"
+
+Panel {
+    edge: background
+    background: #1e2028
+
+    state wall_path: string = ""
+    state wall_blur: float = 0.0
+
+    Image { source: wall_path; fit: cover; inset: 0dp; blur: wall_blur }
+}

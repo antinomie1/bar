@@ -1,0 +1,58 @@
+// A tray item's menu, opened by bar.aegle beside the item. One level shows
+// at a time (tray.luau): a submenu, marked `>`, opens in its parent's place,
+// and `<` at the top goes back.
+use "palettes.aegle"
+use "ui.aegle"
+
+// An entry: its label, dimmed when disabled, and `mark` at the far end.
+component Item(label: string, mark: string, dim: bool) {
+    event pressed
+    Stack {
+        width: 100%; min_width: 0dp
+        // Long labels end in an ellipsis rather than widening the menu.
+        Row { align: center; gap: 12dp; padding: [6dp, 10dp]; width: 100%; min_width: 0dp
+              Text { text: label; grow: 1; shrink: 1; min_width: 0dp; visible: !dim; foreground: token("palette.2")
+                     font_family: "Hack, monospace"; font_size: 15dp }
+              Text { text: label; grow: 1; shrink: 1; min_width: 0dp; visible: dim; foreground: token("palette.5")
+                     font_family: "Hack, monospace"; font_size: 15dp }
+              Text { text: mark; foreground: token("palette.5"); font_family: "Hack, monospace"; font_size: 15dp } }
+        Hit { on pressed { emit pressed } }
+    }
+}
+
+Panel {
+    edge: popup
+    span: 320dp
+    radius: 0dp
+    background: token("palette.1")
+    blur: true
+    padding: [4dp, 0dp]
+
+    state tray_menu: list<MenuEntry> = []
+    // Filled by tray.luau.
+    state tray_view: list<MenuEntry> = []
+    state tray_title: string = ""
+    state tray_nested: bool = false
+
+    if tray_nested {
+        Item { label: "< " + tray_title; mark: ""; dim: true; on pressed { host.tray_back() } }
+        Column { height: 1dp; margin: [4dp, 10dp]; background: token("palette.5") }
+    }
+    // Long levels, such as a proxy list, scroll.
+    ScrollView {
+        max_height: 560dp
+        border_width: 0dp
+        padding: 0dp
+        for entry in tray_view key entry.id {
+            if entry.separator {
+                Column { height: 1dp; margin: [4dp, 10dp]; background: token("palette.5") }
+            } else if entry.submenu {
+                Item { label: "  " + entry.label; mark: ">"; dim: !entry.enabled; on pressed { host.tray_enter(entry.id) } }
+            } else if entry.checked {
+                Item { label: "* " + entry.label; mark: ""; dim: !entry.enabled; on pressed { host.tray_pick(entry.id) } }
+            } else {
+                Item { label: "  " + entry.label; mark: ""; dim: !entry.enabled; on pressed { host.tray_pick(entry.id) } }
+            }
+        }
+    }
+}

@@ -1,0 +1,46 @@
+// The bar's volume popup: the output device, a slider and mute.
+use "palettes.aegle"
+
+Panel {
+    edge: popup
+    span: 250dp
+    radius: 0dp
+    background: token("palette.1")
+    blur: true
+    padding: 10dp
+    gap: 8dp
+
+    state volume: float = 0.0
+    state muted: bool = false
+    state audio_device: string = ""
+
+    Text { text: audio_device; shrink: 1; min_width: 0dp; foreground: token("palette.5")
+           font_family: "Hack, monospace"; font_size: 15dp }
+    Row {
+        align: center
+        gap: 8dp
+        Slider {
+            min: 0.0; max: 1.0; value: volume; grow: 1
+            indicator_color: token("palette.3")
+            on changed { host.set_volume(self.value) }
+        }
+        Text { text: str(int(volume * 100.0 + 0.5)) + "%"; min_width: 44dp; foreground: token("palette.2")
+               font_family: "Hack, monospace"; font_size: 15dp }
+    }
+    Stack {
+        Button {
+            text: "mute"; visible: !muted
+            foreground: token("palette.2"); font_family: "Hack, monospace"; font_size: 15dp
+            radius: 0dp; border_width: 0dp; focus_width: 0dp
+            background: #8080801a; hover_background: #80808030; pressed_background: #80808040
+            on clicked { host.toggle_mute() }
+        }
+        Button {
+            text: "unmute"; visible: muted
+            foreground: token("palette.4"); font_family: "Hack, monospace"; font_size: 15dp
+            radius: 0dp; border_width: 0dp; focus_width: 0dp
+            background: token("palette.3"); hover_background: token("palette.3"); pressed_background: token("palette.3")
+            on clicked { host.toggle_mute() }
+        }
+    }
+}

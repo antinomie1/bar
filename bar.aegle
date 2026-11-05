@@ -1,0 +1,163 @@
+// A flat, translucent dwm-style bar: tags, layout symbol and the window
+// title from the left, tray, network, volume, bluetooth and clock on the
+// right. Colors follow Pastel's config through IPC, or the wallpaper
+// (bar.luau); the desktop is blurred behind it.
+//   tags:      left click shows, right click moves the focused window there
+//   layout:    the shown workspace's layout, [2/5] for the second of five
+//              scrolling columns; left click opens the settings (settings.aegle)
+//   tray:      left click activates, right click opens its menu
+//   volume:    left click opens a slider, right click mutes
+//   bluetooth: left click powers the adapter on or off
+// Run: palettes bar.aegle
+use "palettes.aegle"
+use "ui.aegle"
+
+// dwm's tag, a square as tall as the bar: selbg when shown, a square in the
+// top-left corner when occupied, filled when it holds the selected window.
+// Layers share one cell and `visible` picks the look, since colors are
+// tokens, not expressions.
+component Tag(id: int, index: int, name: string, sel: bool, occupied: bool, filled: bool) {
+    Stack {
+        shrink: 0
+        width: 36dp
+        Column { background: token("palette.3"); visible: sel }
+        Column { width: 5dp; height: 5dp; margin: 3dp; justify_self: start; align_self: start
+                 background: token("palette.4"); visible: occupied && sel && filled }
+        Column { width: 5dp; height: 5dp; margin: 3dp; justify_self: start; align_self: start
+                 border_width: 1dp; border_color: token("palette.4"); visible: occupied && sel && !filled }
+        Column { width: 5dp; height: 5dp; margin: 3dp; justify_self: start; align_self: start
+                 border_width: 1dp; border_color: token("palette.2"); visible: occupied && !sel }
+        Row { align: center; justify: center
+              Text { text: name; visible: sel; foreground: token("palette.4"); font_family: "Hack, monospace"; font_size: 16dp }
+              Text { text: name; visible: !sel; foreground: token("palette.2"); font_family: "Hack, monospace"; font_size: 16dp } }
+        // On top, so the whole tag takes clicks and lights up under the pointer.
+        Hit { on pressed { host.focus_workspace(id) }
+              on menu { host.compositor("move-to-workspace " + str(index)) } }
+    }
+}
+
+// A status block: a dimmed name, then its value.
+component Status(name: string, value: string, off: bool) {
+    Row {
+        align: center
+        gap: 6dp
+        padding: [0dp, 9dp]
+        Mono { text: name; dim: true }
+        Mono { text: value; dim: off }
+    }
+}
+
+Panel {
+    edge: top
+    size: 36dp
+    radius: 0dp
+    padding: 0dp
+    background: token("palette.1")
+    blur: true
+
+    state output_workspaces: list<Workspace> = []
+    state output_window: Toplevel = Toplevel(0, "", "", "", 0, false, false, false)
+    state compositor_colors: Colors = Colors("", "", "", "")
+    // Kept by wallpaper.luau.
+    state wall_scheme: Colors = Colors("", "", "", "")
+    state colors_from: string = "compositor"
+    state glass: float = 0.72
+    state tray: list<TrayItem> = []
+    state network: Network = Network("", "", false, 0, false, false)
+    state volume: float = 0.0
+    state muted: bool = false
+    state bluetooth: Bluetooth = Bluetooth(false, false, false)
+    state bluetooth_devices: list<BluetoothDevice> = []
+    // Filled by bar.luau.
+    state layout_symbol: string = ""
+    state net_name: string = "net"
+    state net_label: string = ""
+    state net_off: bool = true
+    state vol_label: string = ""
+    state bt_label: string = ""
+    state time_format: string = "%m-%d %a %H:%M"
+    state time: string = ""
+
+    Row {
+        grow: 1
+        align: stretch
+
+        // Tags touch, as in dwm.
+        Row { align: stretch; gap: 0dp; shrink: 0
+            for ws in output_workspaces key ws.id {
+                Tag {
+                    id: ws.id
+                    index: ws.index
+                    name: ws.name
+                    sel: ws.active
+                    occupied: ws.windows > 0
+                    filled: output_window.focused && output_window.workspace == ws.id
+                }
+            }
+        }
+
+        // The shown workspace's layout, as dwm's symbol (bar.luau).
+        Stack {
+            shrink: 0
+            Row { align: center; padding: [0dp, 11dp]
+                  Mono { text: layout_symbol; dim: false } }
+            Hit { tooltip: "settings"; on pressed { host.toggle("settings.aegle") } }
+        }
+
+        // The title fills the space left, from its start as in dwm; a
+        // floating window gets dwm's outlined square. It starts as far from
+        // the layout symbol as that is from the last tag's digit, centered
+        // in its square.
+        Row {
+            grow: 1; shrink: 1; min_width: 0dp
+            align: center
+            gap: 8dp
+            padding: [0dp, 11dp, 0dp, 15dp]
+            Column { width: 6dp; height: 6dp; shrink: 0; border_width: 1dp; border_color: token("palette.2")
+                     visible: output_window.floating && output_window.id != 0 }
+            Text {
+                text: output_window.title
+                shrink: 1; min_width: 0dp
+                foreground: token("palette.2"); font_family: "Hack, monospace"; font_size: 16dp
+            }
+        }
+
+        Row {
+            align: center
+            shrink: 0
+            padding: [0dp, 3dp]
+            for item in tray key item.id {
+                Stack {
+                    shrink: 0
+                    Icon { name: item.icon; size: 16dp; margin: [0dp, 6dp]; justify_self: center; align_self: center }
+                    Button {
+                        text: ""; tooltip: item.tooltip
+                        padding: 0dp; min_width: 0dp; min_height: 0dp; radius: 0dp; border_width: 0dp; focus_width: 0dp
+                        background: #00000000; hover_background: #80808026; pressed_background: #8080803a
+                        on clicked { host.tray_activate(item.id) }
+                        on context_menu { host.tray_menu(item.id); host.open("tray.aegle") }
+                    }
+                }
+            }
+        }
+
+        Status { name: net_name; value: net_label; off: net_off }
+
+        Stack {
+            shrink: 0
+            Status { name: "vol"; value: vol_label; off: vol_label == "mute" }
+            Hit { on pressed { host.toggle("volume.aegle") }
+                  on menu { host.toggle_mute() } }
+        }
+
+        Stack {
+            shrink: 0
+            visible: bluetooth.available
+            Status { name: "bt"; value: bt_label; off: !bluetooth.powered }
+            Hit { on pressed { host.toggle_bluetooth() } }
+        }
+
+        Row { align: center; padding: [0dp, 12dp, 0dp, 9dp]; shrink: 0
+              Mono { text: time; dim: false } }
+    }
+}

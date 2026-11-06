@@ -15,6 +15,12 @@
     <td align="center">来自 Wallhaven 的壁纸，配色取自壁纸</td>
     <td align="center">布局符号 <code>[2/2]</code>，音量弹出层</td>
   </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="screenshots/apps.png" width="50%" alt="应用程序，最近启动的在前"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">应用程序：最近启动的在前，可搜索，方向键移动</td>
+  </tr>
 </table>
 
 ## 功能
@@ -25,6 +31,7 @@
 - **托盘**：StatusNotifierItem 图标，位图图标缩小后依然清晰；菜单逐级进入，长列表可滚动，过长条目以 `…` 结尾
 - **配色**：取自 Pastel 配置（每次保存即时生效），或取自壁纸（平均色与最鲜艳的颜色）；Pastel 也可跟随壁纸，只改写其 `config.toml` 中的颜色
 - **壁纸**：壁纸文件夹以缓存缩略图列出，可调模糊；在 Wallhaven、Konachan、yande.re（全年龄、横图）中搜索、翻页或随机一张；关闭面板后下载照常进行并显示进度
+- **应用程序**：已安装的应用以图标网格列在居中面板中，最近启动的排在最前；直接打字即按名称与 desktop id 搜索（前缀匹配优先），方向键移动选中项，回车启动，Esc 关闭
 - **设置面板**：按住任何非控件处即可拖动；设置保存在 `~/.config/bar/settings.json`，搜索词不保存
 - **空闲即不耗资源**：不轮询；预览图并行下载，缩略图只生成一次，超过 4K 的壁纸加载时缩小一次
 
@@ -41,12 +48,13 @@ git clone https://github.com/antinomie1/bar ~/bar
 palettes ~/bar/bar.aegle
 ```
 
-状态栏会自行打开壁纸层。随 Pastel 启动、并为设置与随机壁纸绑定快捷键，在 `~/.config/pastel/config.toml` 中：
+状态栏会自行打开壁纸层。随 Pastel 启动、并为应用程序、设置与随机壁纸绑定快捷键，在 `~/.config/pastel/config.toml` 中：
 
 ```toml
 autostart = ["palettes ~/bar/bar.aegle"]
 
 [binds]
+"Mod+D" = "spawn palettes msg toggle apps.aegle"
 "Mod+S" = "spawn palettes msg toggle settings.aegle"
 "Mod+W" = "spawn palettes msg random_wallpaper"
 ```
@@ -73,7 +81,8 @@ autostart = ["palettes ~/bar/bar.aegle"]
 | `wallpaper.aegle`、`wallpaper.luau` | 壁纸；设置、搜索、下载、壁纸取色、Pastel 配色 |
 | `settings.aegle`、`settings.luau` | 设置面板 |
 | `tray.aegle`、`tray.luau` | 逐级进入的托盘菜单 |
+| `apps.aegle`、`apps.luau` | 应用程序及其搜索 |
 | `volume.aegle` | 音量弹出层 |
 | `ui.aegle` | 状态栏与各面板共用的部件 |
 
-下载保存在壁纸文件夹（默认 `~/Pictures/Wallpapers`），缩略图与预览图在 `~/.cache/bar`。
+下载保存在壁纸文件夹（默认 `~/Pictures/Wallpapers`），缩略图与预览图在 `~/.cache/bar`，启动过的应用记录在 `~/.local/state/bar/apps.json`。

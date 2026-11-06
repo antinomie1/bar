@@ -1,0 +1,71 @@
+// The application list, toggled by `palettes msg toggle apps.aegle`. Typing
+// goes to the search at once; the arrows move the selection, Enter starts
+// it, a click starts any, and Escape closes. apps.luau orders the list, the
+// recently started first.
+use "palettes.aegle"
+use "ui.aegle"
+
+record AppItem { id: string; name: string; icon: string; selected: bool }
+
+// A tile scrolls into view when selected.
+component Tile(id: string, name: string, icon: string, selected: bool) {
+    Reveal {
+        active: selected
+        width: 112dp; height: 100dp; shrink: 0
+        Column { background: token("palette.3"); visible: selected }
+        Column {
+            align: center; justify: center; gap: 8dp; padding: [8dp, 6dp]; min_width: 0dp
+            Icon { name: icon; size: 40dp; align_self: center }
+            Text { text: name; visible: !selected; shrink: 1; min_width: 0dp; foreground: token("palette.2")
+                   font_family: "Hack, monospace"; font_size: 13dp }
+            Text { text: name; visible: selected; shrink: 1; min_width: 0dp; foreground: token("palette.4")
+                   font_family: "Hack, monospace"; font_size: 13dp }
+        }
+        Hit { tooltip: name; on pressed { host.launch_app(id) } }
+    }
+}
+
+Panel {
+    edge: center
+    span: 640dp
+    size: 480dp
+    layer: overlay
+    keyboard: exclusive
+    radius: 0dp
+    padding: 12dp
+    gap: 12dp
+    background: token("palette.1")
+    blur: true
+    // Taken before the search field, whose caret they would move.
+    keys: ["Up", "Down", "Left", "Right"]
+    on key { host.move_app(self.key) }
+
+    state applications: list<App> = []
+    // Filled by apps.luau.
+    state app_view: list<AppItem> = []
+    state app_count: string = ""
+
+    Row {
+        align: center; gap: 10dp; shrink: 0
+        Mono { text: ">"; dim: true }
+        TextField {
+            text: ""; grow: 1; min_width: 0dp
+            foreground: token("palette.2"); font_family: "Hack, monospace"; font_size: 16dp
+            background: #8080801a; radius: 0dp; border_width: 0dp; focus_width: 0dp; padding: 7dp
+            on changed { host.search_apps(self.text) }
+            on submitted { host.launch_selected() }
+        }
+        Mono { text: app_count; dim: true }
+    }
+    Column { height: 1dp; shrink: 0; background: token("palette.5") }
+    ScrollView {
+        border_width: 0dp
+        grow: 1; min_height: 0dp
+        Row {
+            wrap: wrap; gap: 8dp
+            for app in app_view key app.id {
+                Tile { id: app.id; name: app.name; icon: app.icon; selected: app.selected }
+            }
+        }
+    }
+}

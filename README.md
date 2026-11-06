@@ -15,6 +15,12 @@ A flat, translucent dwm-style bar for [Pastel](https://github.com/antinomie1/Pas
     <td align="center">Wallpapers from Wallhaven, colors from the wallpaper</td>
     <td align="center">Layout symbol <code>[2/2]</code>, the volume popup</td>
   </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="screenshots/apps.png" width="50%" alt="Applications, the recently started first"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">The applications: the recently started first, searchable, moved through by the arrows</td>
+  </tr>
 </table>
 
 ## Features
@@ -25,6 +31,7 @@ A flat, translucent dwm-style bar for [Pastel](https://github.com/antinomie1/Pas
 - **Tray**: StatusNotifierItem icons, bitmap ones shrunk to stay sharp; menus open one level at a time, long lists scroll, long entries end in `…`
 - **Colors**: from Pastel's config, live on every save, or from the wallpaper (its average and most vivid color); Pastel can follow the wallpaper too, which rewrites only the colors in its `config.toml`
 - **Wallpapers**: the wallpaper folder as cached thumbnails, a blur slider, and a search across Wallhaven, Konachan and yande.re (safe, landscape) with paging and a random pick; downloads keep going with the panel closed and show their progress
+- **Applications**: every installed application as an icon grid in a centered panel, the recently started first; typing searches names and desktop ids at once (prefix matches first), the arrows move the selection, Enter starts it, Escape closes
 - **Settings panel**: drag it by any spot without a control; settings persist in `~/.config/bar/settings.json`, search words do not
 - **Idle means idle**: no polling; previews download in parallel, thumbnails are made once, wallpapers past 4K are shrunk once when loaded
 
@@ -41,12 +48,13 @@ git clone https://github.com/antinomie1/bar ~/bar
 palettes ~/bar/bar.aegle
 ```
 
-The bar opens the wallpaper layer itself. To start it with Pastel, and to bind the settings and a random wallpaper, in `~/.config/pastel/config.toml`:
+The bar opens the wallpaper layer itself. To start it with Pastel, and to bind the applications, the settings and a random wallpaper, in `~/.config/pastel/config.toml`:
 
 ```toml
 autostart = ["palettes ~/bar/bar.aegle"]
 
 [binds]
+"Mod+D" = "spawn palettes msg toggle apps.aegle"
 "Mod+S" = "spawn palettes msg toggle settings.aegle"
 "Mod+W" = "spawn palettes msg random_wallpaper"
 ```
@@ -73,7 +81,8 @@ In the settings: **wallpapers** sets one from the folder, **online** searches th
 | `wallpaper.aegle`, `wallpaper.luau` | The wallpaper; settings, searching, downloads, colors from the wallpaper, Pastel's colors |
 | `settings.aegle`, `settings.luau` | The settings panel |
 | `tray.aegle`, `tray.luau` | Tray menus, one level at a time |
+| `apps.aegle`, `apps.luau` | The applications and their search |
 | `volume.aegle` | The volume popup |
 | `ui.aegle` | Pieces the bar and panels share |
 
-Downloads go to the wallpaper folder (`~/Pictures/Wallpapers` by default), thumbnails and previews to `~/.cache/bar`.
+Downloads go to the wallpaper folder (`~/Pictures/Wallpapers` by default), thumbnails and previews to `~/.cache/bar`, the applications started to `~/.local/state/bar/apps.json`.
